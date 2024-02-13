@@ -285,11 +285,56 @@ func (a *NitricAzurePulumiProvider) Post(ctx *pulumi.Context) error {
 func (a *NitricAzurePulumiProvider) Result(ctx *pulumi.Context) (pulumi.StringOutput, error) {
 	outputs := []interface{}{}
 
+	outputs = append(outputs, "# Here's what we deployed for you on Azure")
+
+	outputs = append(outputs, pulumi.Sprintf("## Resource Group"))
+	outputs = append(outputs, pulumi.Sprintf("* %s", a.resourceGroup.Name))
+
+	if a.storageAccount != nil {
+		outputs = append(outputs, pulumi.Sprintf("## StorageAccount"))
+		outputs = append(outputs, pulumi.Sprintf("* %s", a.storageAccount.Name))
+	}
+
+	if a.keyVault != nil {
+		outputs = append(outputs, pulumi.Sprintf("## KeyVault"))
+		outputs = append(outputs, pulumi.Sprintf("* %s", a.keyVault.Name))
+	}
+
+	if len(a.containerApps) > 0 {
+		outputs = append(outputs, pulumi.Sprintf("## Container Apps"))
+		for containerAppName, _ := range a.containerApps {
+			outputs = append(outputs, pulumi.Sprintf("* %s", containerAppName))
+		}
+	}
+
+	if len(a.buckets) > 0 {
+		outputs = append(outputs, pulumi.Sprintf("## Storage Containers"))
+		for bucketName, _ := range a.buckets {
+			outputs = append(outputs, pulumi.Sprintf("* %s", bucketName))
+		}
+	}
+
+	if len(a.topics) > 0 {
+		outputs = append(outputs, pulumi.Sprintf("## Eventgrid Topics"))
+		for topicName, _ := range a.topics {
+			outputs = append(outputs, pulumi.Sprintf("* %s", topicName))
+		}
+	}
+
+	if len(a.queues) > 0 {
+		outputs = append(outputs, pulumi.Sprintf("## Storage Queues"))
+		for queueName, _ := range a.queues {
+			// Escaping the queue url here is quite the pain so link to the list for now
+
+			outputs = append(outputs, pulumi.Sprintf("* %s", queueName))
+		}
+	}
+
 	// Add APIs outputs
 	if len(a.apis) > 0 {
-		outputs = append(outputs, pulumi.Sprintf("API Endpoints:\n──────────────"))
+		outputs = append(outputs, pulumi.Sprintf("## API Management Services"))
 		for apiName, api := range a.apis {
-			outputs = append(outputs, pulumi.Sprintf("%s: %s", apiName, api.ApiManagementService.GatewayUrl))
+			outputs = append(outputs, pulumi.Sprintf("* [%s](%s)", apiName, api.ApiManagementService.GatewayUrl))
 		}
 	}
 
@@ -298,9 +343,9 @@ func (a *NitricAzurePulumiProvider) Result(ctx *pulumi.Context) (pulumi.StringOu
 		if len(outputs) > 0 {
 			outputs = append(outputs, "\n")
 		}
-		outputs = append(outputs, pulumi.Sprintf("HTTP Proxies:\n──────────────"))
+		outputs = append(outputs, pulumi.Sprintf("## HTTP Proxies"))
 		for proxyName, proxy := range a.httpProxies {
-			outputs = append(outputs, pulumi.Sprintf("%s: %s", proxyName, proxy.ApiManagementService.GatewayUrl))
+			outputs = append(outputs, pulumi.Sprintf("* [%s](%s)", proxyName, proxy.ApiManagementService.GatewayUrl))
 		}
 	}
 
