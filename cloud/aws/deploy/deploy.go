@@ -177,19 +177,41 @@ func (a *NitricAwsPulumiProvider) Post(ctx *pulumi.Context) error {
 func (a *NitricAwsPulumiProvider) Result(ctx *pulumi.Context) (pulumi.StringOutput, error) {
 	outputs := []interface{}{}
 
-	outputs = append(outputs, "# Here's what we deployed for you on AWS 🚀")
+	outputs = append(outputs, "# Here's what we deployed for you on AWS")
 
 	if len(a.lambdas) > 0 {
-		outputs = append(outputs, pulumi.Sprintf("## λ AWS Lambdas"))
+		outputs = append(outputs, pulumi.Sprintf("## AWS Lambdas"))
 		for lambdaName, lambdaFunc := range a.lambdas {
-			outputs = append(outputs, pulumi.Sprintf("* %s: %s", lambdaName, lambdaFunc.Arn))
+			lambdaLink := pulumi.Sprintf("https://%s.console.aws.amazon.com/lambda/home?region=%s#/functions/%s", a.region, a.region, lambdaFunc.Name)
+			outputs = append(outputs, pulumi.Sprintf("* [%s](%s)", lambdaName, lambdaLink))
 		}
 	}
 
 	if len(a.buckets) > 0 {
-		outputs = append(outputs, pulumi.Sprintf("## 🪣 S3 Buckets"))
+		outputs = append(outputs, pulumi.Sprintf("## S3 Buckets"))
 		for bucketName, s3Bucket := range a.buckets {
-			outputs = append(outputs, pulumi.Sprintf("* %s: %s", bucketName, s3Bucket.Arn))
+			s3Link := pulumi.Sprintf("https://s3.console.aws.amazon.com/s3/buckets/%s?region=%s&bucketType=general&tab=objects", s3Bucket.Bucket, a.region)
+
+			outputs = append(outputs, pulumi.Sprintf("* [%s](%s)", bucketName, s3Link))
+		}
+	}
+
+	if len(a.topics) > 0 {
+		outputs = append(outputs, pulumi.Sprintf("## SNS Topics"))
+		for topicName, snsTopic := range a.topics {
+			snsLink := pulumi.Sprintf("https://%s.console.aws.amazon.com/sns/v3/home?region=%s#topic/%s", a.region, a.region, snsTopic.sns.Arn)
+
+			outputs = append(outputs, pulumi.Sprintf("* [%s](%s)", topicName, snsLink))
+		}
+	}
+
+	if len(a.queues) > 0 {
+		outputs = append(outputs, pulumi.Sprintf("## SQS Queues"))
+		for queueName, _ := range a.queues {
+			// Escaping the queue url here is quite the pain so link to the list for now
+			sqsLink := pulumi.Sprintf("https://%s.console.aws.amazon.com/sqs/v3/home?region=%s#queues", a.region, a.region)
+
+			outputs = append(outputs, pulumi.Sprintf("* [%s](%s)", queueName, sqsLink))
 		}
 	}
 
@@ -197,7 +219,7 @@ func (a *NitricAwsPulumiProvider) Result(ctx *pulumi.Context) (pulumi.StringOutp
 	if len(a.apis) > 0 {
 		outputs = append(outputs, pulumi.Sprintf("## API Gateways"))
 		for apiName, api := range a.apis {
-			outputs = append(outputs, pulumi.Sprintf("* %s: %s", apiName, api.ApiEndpoint))
+			outputs = append(outputs, pulumi.Sprintf("* [%s](%s)", apiName, api.ApiEndpoint))
 		}
 	}
 
@@ -206,9 +228,9 @@ func (a *NitricAwsPulumiProvider) Result(ctx *pulumi.Context) (pulumi.StringOutp
 		if len(outputs) > 0 {
 			outputs = append(outputs, "\n")
 		}
-		outputs = append(outputs, pulumi.Sprintf("## HTTP Proxies:"))
+		outputs = append(outputs, pulumi.Sprintf("## HTTP Proxies"))
 		for proxyName, proxy := range a.httpProxies {
-			outputs = append(outputs, pulumi.Sprintf("* %s: %s", proxyName, proxy.ApiEndpoint))
+			outputs = append(outputs, pulumi.Sprintf("* [%s](%s)", proxyName, proxy.ApiEndpoint))
 		}
 	}
 
@@ -217,9 +239,9 @@ func (a *NitricAwsPulumiProvider) Result(ctx *pulumi.Context) (pulumi.StringOutp
 		if len(outputs) > 0 {
 			outputs = append(outputs, "\n")
 		}
-		outputs = append(outputs, pulumi.Sprintf("## Websockets:"))
+		outputs = append(outputs, pulumi.Sprintf("## Websockets"))
 		for wsName, ws := range a.websockets {
-			outputs = append(outputs, pulumi.Sprintf("* %s: %s/%s", wsName, ws.ApiEndpoint, common.DefaultWsStageName))
+			outputs = append(outputs, pulumi.Sprintf("* [%s](%s/%s)", wsName, ws.ApiEndpoint, common.DefaultWsStageName))
 		}
 	}
 
