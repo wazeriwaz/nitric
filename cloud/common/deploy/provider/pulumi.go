@@ -221,7 +221,9 @@ func (s *PulumiProviderServer) Up(req *deploymentspb.DeploymentUpRequest, stream
 	stream.Send(&deploymentspb.DeploymentUpEvent{
 		Content: &deploymentspb.DeploymentUpEvent_Result{
 			Result: &deploymentspb.UpResult{
-				Details: resultStr,
+				Content: &deploymentspb.UpResult_Markdown{
+					Markdown: resultStr,
+				},
 			},
 		},
 	})

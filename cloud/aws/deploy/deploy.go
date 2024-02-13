@@ -177,11 +177,27 @@ func (a *NitricAwsPulumiProvider) Post(ctx *pulumi.Context) error {
 func (a *NitricAwsPulumiProvider) Result(ctx *pulumi.Context) (pulumi.StringOutput, error) {
 	outputs := []interface{}{}
 
+	outputs = append(outputs, "# Here's what we deployed for you on AWS 🚀")
+
+	if len(a.lambdas) > 0 {
+		outputs = append(outputs, pulumi.Sprintf("## λ AWS Lambdas"))
+		for lambdaName, lambdaFunc := range a.lambdas {
+			outputs = append(outputs, pulumi.Sprintf("* %s: %s", lambdaName, lambdaFunc.Arn))
+		}
+	}
+
+	if len(a.buckets) > 0 {
+		outputs = append(outputs, pulumi.Sprintf("## 🪣 S3 Buckets"))
+		for bucketName, s3Bucket := range a.buckets {
+			outputs = append(outputs, pulumi.Sprintf("* %s: %s", bucketName, s3Bucket.Arn))
+		}
+	}
+
 	// Add APIs outputs
 	if len(a.apis) > 0 {
-		outputs = append(outputs, pulumi.Sprintf("API Endpoints:\n──────────────"))
+		outputs = append(outputs, pulumi.Sprintf("## API Gateways"))
 		for apiName, api := range a.apis {
-			outputs = append(outputs, pulumi.Sprintf("%s: %s", apiName, api.ApiEndpoint))
+			outputs = append(outputs, pulumi.Sprintf("* %s: %s", apiName, api.ApiEndpoint))
 		}
 	}
 
@@ -190,9 +206,9 @@ func (a *NitricAwsPulumiProvider) Result(ctx *pulumi.Context) (pulumi.StringOutp
 		if len(outputs) > 0 {
 			outputs = append(outputs, "\n")
 		}
-		outputs = append(outputs, pulumi.Sprintf("HTTP Proxies:\n──────────────"))
+		outputs = append(outputs, pulumi.Sprintf("## HTTP Proxies:"))
 		for proxyName, proxy := range a.httpProxies {
-			outputs = append(outputs, pulumi.Sprintf("%s: %s", proxyName, proxy.ApiEndpoint))
+			outputs = append(outputs, pulumi.Sprintf("* %s: %s", proxyName, proxy.ApiEndpoint))
 		}
 	}
 
@@ -201,9 +217,9 @@ func (a *NitricAwsPulumiProvider) Result(ctx *pulumi.Context) (pulumi.StringOutp
 		if len(outputs) > 0 {
 			outputs = append(outputs, "\n")
 		}
-		outputs = append(outputs, pulumi.Sprintf("Websockets:\n──────────────"))
+		outputs = append(outputs, pulumi.Sprintf("## Websockets:"))
 		for wsName, ws := range a.websockets {
-			outputs = append(outputs, pulumi.Sprintf("%s: %s/%s", wsName, ws.ApiEndpoint, common.DefaultWsStageName))
+			outputs = append(outputs, pulumi.Sprintf("* %s: %s/%s", wsName, ws.ApiEndpoint, common.DefaultWsStageName))
 		}
 	}
 
