@@ -25,7 +25,7 @@ import (
 
 	"github.com/nitrictech/nitric/cloud/common/deploy"
 	"github.com/nitrictech/nitric/cloud/common/deploy/provider"
-	deploymentspb "github.com/nitrictech/nitric/core/pkg/proto/deployments/v1"
+	"github.com/nitrictech/nitric/cloud/common/deploy/pulumix"
 	"github.com/pkg/errors"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/apigateway"
 	"github.com/pulumi/pulumi-gcp/sdk/v6/go/gcp/cloudtasks"
@@ -158,7 +158,7 @@ var baseComputePermissions []string = []string{
 	"monitoring.timeSeries.create",
 }
 
-func (a *NitricGcpPulumiProvider) Pre(ctx *pulumi.Context, resources []*deploymentspb.Resource) error {
+func (a *NitricGcpPulumiProvider) Pre(ctx *pulumi.Context, resources []*pulumix.NitricPulumiResource[any]) error {
 	// make our random stackId
 	stackRandId, err := random.NewRandomString(ctx, fmt.Sprintf("%s-stack-name", ctx.Stack()), &random.RandomStringArgs{
 		Special: pulumi.Bool(false),
