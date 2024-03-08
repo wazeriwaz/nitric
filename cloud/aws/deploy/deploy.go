@@ -71,8 +71,8 @@ type NitricAwsPulumiProvider struct {
 
 	provider.NitricDefaultOrder
 
-	resourceTaggingClient *resourcegroupstaggingapi.ResourceGroupsTaggingAPI
-	lambdaClient          lambdaiface.LambdaAPI
+	ResourceTaggingClient *resourcegroupstaggingapi.ResourceGroupsTaggingAPI
+	LambdaClient          lambdaiface.LambdaAPI
 }
 
 var _ provider.NitricPulumiProvider = (*NitricAwsPulumiProvider)(nil)
@@ -151,9 +151,9 @@ func (a *NitricAwsPulumiProvider) Pre(ctx *pulumi.Context, resources []*pulumix.
 		SharedConfigState: session.SharedConfigEnable,
 	}))
 
-	a.resourceTaggingClient = resourcegroupstaggingapi.New(sess)
+	a.ResourceTaggingClient = resourcegroupstaggingapi.New(sess)
 
-	a.lambdaClient = lambdaClient.New(sess, &aws.Config{Region: aws.String(a.Region)})
+	a.LambdaClient = lambdaClient.New(sess, &aws.Config{Region: aws.String(a.Region)})
 
 	a.EcrAuthToken, err = ecr.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenArgs{})
 	if err != nil {
