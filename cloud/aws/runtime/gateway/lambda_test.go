@@ -17,6 +17,7 @@ package gateway_test
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -27,7 +28,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	mock_provider "github.com/nitrictech/nitric/cloud/aws/mocks/provider"
@@ -98,36 +99,44 @@ var _ = Describe("Lambda", func() {
 
 	Context("Http Events", func() {
 		When("Sending a compliant HTTP Event", func() {
-			ctrl := gomock.NewController(GinkgoT())
-			mockManager := mock_apis.NewMockApiRequestHandler(ctrl)
-			// mockHandler := mock_worker.NewMockWorker(ctrl)
-			mockProvider := mock_provider.NewMockAwsResourceProvider(ctrl)
+			var (
+				mockManager  *mock_apis.MockApiRequestHandler
+				mockProvider *mock_provider.MockAwsResourceProvider
+				runtime      MockLambdaRuntime
+				client       coreGateway.GatewayService
+			)
 
-			runtime := MockLambdaRuntime{
-				// Setup mock events for our runtime to process...
-				eventQueue: []interface{}{&events.APIGatewayV2HTTPRequest{
-					Headers: map[string]string{
-						"User-Agent":            "Test",
-						"x-nitric-payload-type": "TestPayload",
-						"x-nitric-request-id":   "test-request-id",
-						"Content-Type":          "text/plain",
-					},
-					RouteKey:       "non-null",
-					RawPath:        "/test/test",
-					RawQueryString: "key=test&key2=test1&key=test2",
-					Body:           "Test Payload",
-					RequestContext: events.APIGatewayV2HTTPRequestContext{
-						APIID: "test-api",
-						HTTP: events.APIGatewayV2HTTPRequestContextHTTPDescription{
-							Method: "GET",
+			BeforeEach(func() {
+				ctrl := gomock.NewController(GinkgoT())
+				mockManager = mock_apis.NewMockApiRequestHandler(ctrl)
+				// mockHandler := mock_worker.NewMockWorker(ctrl)
+				mockProvider = mock_provider.NewMockAwsResourceProvider(ctrl)
+
+				runtime = MockLambdaRuntime{
+					// Setup mock events for our runtime to process...
+					eventQueue: []interface{}{&events.APIGatewayV2HTTPRequest{
+						Headers: map[string]string{
+							"User-Agent":            "Test",
+							"x-nitric-payload-type": "TestPayload",
+							"x-nitric-request-id":   "test-request-id",
+							"Content-Type":          "text/plain",
 						},
-					},
-					Cookies: []string{"test1=testcookie1", "test2=testcookie2"},
-				}},
-			}
+						RouteKey:       "non-null",
+						RawPath:        "/test/test",
+						RawQueryString: "key=test&key2=test1&key=test2",
+						Body:           "Test Payload",
+						RequestContext: events.APIGatewayV2HTTPRequestContext{
+							APIID: "test-api",
+							HTTP: events.APIGatewayV2HTTPRequestContextHTTPDescription{
+								Method: "GET",
+							},
+						},
+						Cookies: []string{"test1=testcookie1", "test2=testcookie2"},
+					}},
+				}
 
-			client, err := lambda_service.NewWithRuntime(mockProvider, runtime.Start)
-			Expect(err).To(BeNil())
+				client, _ = lambda_service.NewWithRuntime(mockProvider, runtime.Start)
+			})
 
 			// This function will block which means we don't need to wait on processing,
 			// the function will unblock once processing has finished, this is due to our mock
@@ -142,7 +151,6 @@ var _ = Describe("Lambda", func() {
 
 				By("Having at least one worker available")
 				mockManager.EXPECT().WorkerCount().Return(1)
-				// mockHandler.EXPECT().HandlesTrigger(gomock.Any()).Return(true)
 
 				By("Handling a single HTTP request")
 				mockManager.EXPECT().HandleRequest(gomock.Any(), EqProto(&apispb.ServerMessage{
@@ -180,31 +188,39 @@ var _ = Describe("Lambda", func() {
 
 	Context("Websocket Events", func() {
 		When("Sending a compliant Websocket Event", func() {
-			_ = os.Setenv("NITRIC_STACK_ID", "test-stack")
-			ctrl := gomock.NewController(GinkgoT())
-			mockManager := mock_websockets.NewMockWebsocketRequestHandler(ctrl)
+			var (
+				mockManager  *mock_websockets.MockWebsocketRequestHandler
+				mockProvider *mock_provider.MockAwsResourceProvider
+				runtime      MockLambdaRuntime
+				client       coreGateway.GatewayService
+			)
 
-			mockProvider := mock_provider.NewMockAwsResourceProvider(ctrl)
+			BeforeEach(func() {
+				_ = os.Setenv("NITRIC_STACK_ID", "test-stack")
+				ctrl := gomock.NewController(GinkgoT())
+				mockManager = mock_websockets.NewMockWebsocketRequestHandler(ctrl)
 
-			runtime := MockLambdaRuntime{
-				// Setup mock events for our runtime to process...
-				eventQueue: []interface{}{&events.APIGatewayWebsocketProxyRequest{
-					Headers: map[string]string{
-						"User-Agent":   "Test",
-						"Content-Type": "text/plain",
-					},
-					Body: "Test Payload",
-					RequestContext: events.APIGatewayWebsocketProxyRequestContext{
-						APIID: "test-api",
-						// as a connection request
-						RouteKey:     "$connect",
-						ConnectionID: "testing",
-					},
-				}},
-			}
+				mockProvider = mock_provider.NewMockAwsResourceProvider(ctrl)
 
-			client, err := lambda_service.NewWithRuntime(mockProvider, runtime.Start)
-			Expect(err).To(BeNil())
+				runtime = MockLambdaRuntime{
+					// Setup mock events for our runtime to process...
+					eventQueue: []interface{}{&events.APIGatewayWebsocketProxyRequest{
+						Headers: map[string]string{
+							"User-Agent":   "Test",
+							"Content-Type": "text/plain",
+						},
+						Body: "Test Payload",
+						RequestContext: events.APIGatewayWebsocketProxyRequestContext{
+							APIID: "test-api",
+							// as a connection request
+							RouteKey:     "$connect",
+							ConnectionID: "testing",
+						},
+					}},
+				}
+
+				client, _ = lambda_service.NewWithRuntime(mockProvider, runtime.Start)
+			})
 
 			// This function will block which means we don't need to wait on processing,
 			// the function will unblock once processing has finished, this is due to our mock
@@ -214,7 +230,7 @@ var _ = Describe("Lambda", func() {
 				// pool.EXPECT().GetWorker(gomock.Any()).Return(mockHandler, nil)
 
 				By("Having at least one worker")
-				mockManager.EXPECT().WorkerCount().Return(1)
+				mockManager.EXPECT().WorkerCount().AnyTimes().Return(1)
 
 				By("The websocket gateway existing")
 				mockProvider.EXPECT().GetApiGatewayById(gomock.Any(), "test-api").Return(&apigatewayv2.GetApiOutput{
@@ -223,7 +239,7 @@ var _ = Describe("Lambda", func() {
 					},
 				}, nil)
 
-				By("Handling a single HTTP request")
+				By("Handling a single Websocket request")
 				mockManager.EXPECT().HandleRequest(&websocketspb.ServerMessage{
 					Content: &websocketspb.ServerMessage_WebsocketEventRequest{
 						WebsocketEventRequest: &websocketspb.WebsocketEventRequest{
@@ -259,12 +275,12 @@ var _ = Describe("Lambda", func() {
 
 	Context("SNS Events", func() {
 		When("The Lambda Gateway receives SNS events", func() {
-			ctrl := gomock.NewController(GinkgoT())
-			mockProvider := mock_provider.NewMockAwsResourceProvider(ctrl)
-
-			// pool := mock_pool.NewMockWorkerPool(ctrl)
-			mockManager := mock_topics.NewMockSubscriptionRequestHandler(ctrl)
-			// mockHandler := mock_worker.NewMockWorker(ctrl)
+			var (
+				mockManager  *mock_topics.MockSubscriptionRequestHandler
+				mockProvider *mock_provider.MockAwsResourceProvider
+				runtime      MockLambdaRuntime
+				client       coreGateway.GatewayService
+			)
 
 			topicName := "MyTopic"
 			content, _ := structpb.NewStruct(map[string]interface{}{
@@ -277,28 +293,35 @@ var _ = Describe("Lambda", func() {
 				},
 			}
 
-			messageBytes, err := proto.Marshal(&message)
-			Expect(err).To(BeNil())
+			BeforeEach(func() {
+				ctrl := gomock.NewController(GinkgoT())
+				mockProvider = mock_provider.NewMockAwsResourceProvider(ctrl)
+				mockManager = mock_topics.NewMockSubscriptionRequestHandler(ctrl)
 
-			runtime := MockLambdaRuntime{
-				// Setup mock events for our runtime to process...
-				eventQueue: []interface{}{&events.SNSEvent{
-					Records: []events.SNSEventRecord{
-						{
-							EventVersion:         "",
-							EventSource:          "aws:sns",
-							EventSubscriptionArn: "some:arbitrary:subscription:arn:MySubscription",
-							SNS: events.SNSEntity{
-								TopicArn: fmt.Sprintf("arn:aws:sns:us-east-1:12345678910:arn:%s", topicName),
-								Message:  string(messageBytes),
+				messageBytes, err := proto.Marshal(&message)
+				Expect(err).To(BeNil())
+
+				b64Message := base64.StdEncoding.EncodeToString(messageBytes)
+
+				runtime = MockLambdaRuntime{
+					// Setup mock events for our runtime to process...
+					eventQueue: []interface{}{&events.SNSEvent{
+						Records: []events.SNSEventRecord{
+							{
+								EventVersion:         "",
+								EventSource:          "aws:sns",
+								EventSubscriptionArn: "some:arbitrary:subscription:arn:MySubscription",
+								SNS: events.SNSEntity{
+									TopicArn: fmt.Sprintf("arn:aws:sns:us-east-1:12345678910:arn:%s", topicName),
+									Message:  b64Message,
+								},
 							},
 						},
-					},
-				}},
-			}
+					}},
+				}
 
-			client, err := lambda_service.NewWithRuntime(mockProvider, runtime.Start)
-			Expect(err).To(BeNil())
+				client, _ = lambda_service.NewWithRuntime(mockProvider, runtime.Start)
+			})
 
 			It("The gateway should translate into a standard NitricRequest", func() {
 				By("having the topic available")
@@ -309,7 +332,7 @@ var _ = Describe("Lambda", func() {
 				}, nil)
 
 				By("having at least one worker")
-				mockManager.EXPECT().WorkerCount().Return(1)
+				mockManager.EXPECT().WorkerCount().AnyTimes().Return(1)
 
 				By("Handling a single event")
 				mockManager.EXPECT().HandleRequest(EqProto(&topicspb.ServerMessage{
@@ -340,38 +363,46 @@ var _ = Describe("Lambda", func() {
 
 	Context("S3 Events", func() {
 		When("The Lambda Gateway receives S3 Put events", func() {
-			ctrl := gomock.NewController(GinkgoT())
-			mockProvider := mock_provider.NewMockAwsResourceProvider(ctrl)
+			var (
+				mockManager  *mock_storage.MockBucketRequestHandler
+				mockProvider *mock_provider.MockAwsResourceProvider
+				runtime      MockLambdaRuntime
+				client       coreGateway.GatewayService
+			)
 
-			// pool := mock_pool.NewMockWorkerPool(ctrl)
-			mockManager := mock_storage.NewMockBucketRequestHandler(ctrl)
-			// mockHandler := mock_worker.NewMockWorker(ctrl)
+			BeforeEach(func() {
+				ctrl := gomock.NewController(GinkgoT())
+				mockProvider = mock_provider.NewMockAwsResourceProvider(ctrl)
 
-			runtime := MockLambdaRuntime{
-				// Setup mock events for our runtime to process...
-				eventQueue: []interface{}{&events.S3Event{
-					Records: []events.S3EventRecord{
-						{
-							EventVersion: "",
-							EventSource:  "aws:s3",
-							EventName:    "ObjectCreated:Put",
-							S3: events.S3Entity{
-								Bucket: events.S3Bucket{
-									Name: "images",
-									Arn:  "arn:aws:sns:us-east-1:12345678910:arn:images",
+				// pool := mock_pool.NewMockWorkerPool(ctrl)
+				mockManager = mock_storage.NewMockBucketRequestHandler(ctrl)
+				// mockHandler := mock_worker.NewMockWorker(ctrl)
+
+				runtime = MockLambdaRuntime{
+					// Setup mock events for our runtime to process...
+					eventQueue: []interface{}{&events.S3Event{
+						Records: []events.S3EventRecord{
+							{
+								EventVersion: "",
+								EventSource:  "aws:s3",
+								EventName:    "ObjectCreated:Put",
+								S3: events.S3Entity{
+									Bucket: events.S3Bucket{
+										Name: "images",
+										Arn:  "arn:aws:sns:us-east-1:12345678910:arn:images",
+									},
+									Object: events.S3Object{
+										Key: "cat.png",
+									},
 								},
-								Object: events.S3Object{
-									Key: "cat.png",
-								},
+								ResponseElements: map[string]string{},
 							},
-							ResponseElements: map[string]string{},
 						},
-					},
-				}},
-			}
+					}},
+				}
 
-			client, err := lambda_service.NewWithRuntime(mockProvider, runtime.Start)
-			Expect(err).To(BeNil())
+				client, _ = lambda_service.NewWithRuntime(mockProvider, runtime.Start)
+			})
 
 			// This function will block which means we don't need to wait on processing,
 			// the function will unblock once processing has finished, this is due to our mock
@@ -384,7 +415,7 @@ var _ = Describe("Lambda", func() {
 				// pool.EXPECT().GetWorker(gomock.Any()).Return(mockHandler, nil)
 
 				By("Having at least one worker")
-				mockManager.EXPECT().WorkerCount().Return(1)
+				mockManager.EXPECT().WorkerCount().AnyTimes().Return(1)
 				// mockHandler.EXPECT().HandlesTrigger(gomock.Any()).Return(true)
 
 				By("Handling a single Notification request")
@@ -414,40 +445,49 @@ var _ = Describe("Lambda", func() {
 				Expect(err).To(BeNil())
 			})
 		})
+
 		When("The Lambda Gateway receives S3 Delete events", func() {
-			ctrl := gomock.NewController(GinkgoT())
-			mockProvider := mock_provider.NewMockAwsResourceProvider(ctrl)
+			var (
+				mockManager  *mock_storage.MockBucketRequestHandler
+				mockProvider *mock_provider.MockAwsResourceProvider
+				runtime      MockLambdaRuntime
+				client       coreGateway.GatewayService
+			)
 
-			mockManager := mock_storage.NewMockBucketRequestHandler(ctrl)
+			BeforeEach(func() {
+				ctrl := gomock.NewController(GinkgoT())
+				mockProvider = mock_provider.NewMockAwsResourceProvider(ctrl)
 
-			// pool := mock_pool.NewMockWorkerPool(ctrl)
-			// mockHandler := mock_worker.NewMockWorker(ctrl)
+				mockManager = mock_storage.NewMockBucketRequestHandler(ctrl)
 
-			runtime := MockLambdaRuntime{
-				// Setup mock events for our runtime to process...
-				eventQueue: []interface{}{&events.S3Event{
-					Records: []events.S3EventRecord{
-						{
-							EventVersion: "",
-							EventSource:  "aws:s3",
-							EventName:    "ObjectRemoved:Delete",
-							S3: events.S3Entity{
-								Bucket: events.S3Bucket{
-									Name: "images",
-									Arn:  "arn:aws:sns:us-east-1:12345678910:arn:images",
+				// pool := mock_pool.NewMockWorkerPool(ctrl)
+				// mockHandler := mock_worker.NewMockWorker(ctrl)
+
+				runtime = MockLambdaRuntime{
+					// Setup mock events for our runtime to process...
+					eventQueue: []interface{}{&events.S3Event{
+						Records: []events.S3EventRecord{
+							{
+								EventVersion: "",
+								EventSource:  "aws:s3",
+								EventName:    "ObjectRemoved:Delete",
+								S3: events.S3Entity{
+									Bucket: events.S3Bucket{
+										Name: "images",
+										Arn:  "arn:aws:sns:us-east-1:12345678910:arn:images",
+									},
+									Object: events.S3Object{
+										Key: "cat.png",
+									},
 								},
-								Object: events.S3Object{
-									Key: "cat.png",
-								},
+								ResponseElements: map[string]string{},
 							},
-							ResponseElements: map[string]string{},
 						},
-					},
-				}},
-			}
+					}},
+				}
 
-			client, err := lambda_service.NewWithRuntime(mockProvider, runtime.Start)
-			Expect(err).To(BeNil())
+				client, _ = lambda_service.NewWithRuntime(mockProvider, runtime.Start)
+			})
 
 			// This function will block which means we don't need to wait on processing,
 			// the function will unblock once processing has finished, this is due to our mock
@@ -459,7 +499,7 @@ var _ = Describe("Lambda", func() {
 				}, nil)
 
 				By("Having at least one worker")
-				mockManager.EXPECT().WorkerCount().Return(1)
+				mockManager.EXPECT().WorkerCount().AnyTimes().Return(1)
 
 				By("Handling a single Notification request")
 				mockManager.EXPECT().HandleRequest(&storagepb.ServerMessage{
