@@ -23,7 +23,7 @@ import (
 	"github.com/golang/mock/gomock"
 	mock_gateway "github.com/nitrictech/nitric/core/mocks/gateway"
 	"github.com/nitrictech/nitric/core/pkg/membrane"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -43,41 +43,50 @@ var _ = Describe("Membrane", func() {
 
 	Context("Starting the server", func() {
 		When("The Gateway plugin is available and working", func() {
-			ctrl := gomock.NewController(GinkgoT())
-			mockGateway := mock_gateway.NewMockGatewayService(ctrl)
+			var mem *membrane.Membrane
+			var mockGateway *mock_gateway.MockGatewayService
 
-			os.Args = []string{}
-			membrane, _ := membrane.New(&membrane.MembraneOptions{
-				MinWorkers:              &noMinWorkers,
-				GatewayPlugin:           mockGateway,
-				SuppressLogs:            true,
-				TolerateMissingServices: true,
+			BeforeEach(func() {
+				ctrl := gomock.NewController(GinkgoT())
+				mockGateway = mock_gateway.NewMockGatewayService(ctrl)
+
+				os.Args = []string{}
+				mem, _ = membrane.New(&membrane.MembraneOptions{
+					MinWorkers:              &noMinWorkers,
+					GatewayPlugin:           mockGateway,
+					SuppressLogs:            true,
+					TolerateMissingServices: true,
+				})
 			})
 
 			It("Should successfully start the membrane", func() {
 				By("starting the gateway plugin")
 				mockGateway.EXPECT().Start(gomock.Any()).Times(1).Return(nil)
 
-				_ = membrane.Start()
+				_ = mem.Start()
 			})
 		})
 
 		When("The configured service port is already consumed", func() {
-			ctrl := gomock.NewController(GinkgoT())
-			mockGateway := mock_gateway.NewMockGatewayService(ctrl)
-			mockGateway.EXPECT().Start(gomock.Any()).AnyTimes().Return(nil)
 			var lis net.Listener
-
-			membrane, _ := membrane.New(&membrane.MembraneOptions{
-				MinWorkers:              &noMinWorkers,
-				GatewayPlugin:           mockGateway,
-				SuppressLogs:            true,
-				TolerateMissingServices: true,
-				ServiceAddress:          "localhost:9005",
-			})
+			var mockGateway *mock_gateway.MockGatewayService
+			var mem *membrane.Membrane
 
 			BeforeEach(func() {
+				ctrl := gomock.NewController(GinkgoT())
+				mockGateway = mock_gateway.NewMockGatewayService(ctrl)
+				mockGateway.EXPECT().Start(gomock.Any()).AnyTimes().Return(nil)
+
+				mem, _ = membrane.New(&membrane.MembraneOptions{
+					MinWorkers:              &noMinWorkers,
+					GatewayPlugin:           mockGateway,
+					SuppressLogs:            true,
+					TolerateMissingServices: true,
+					ServiceAddress:          "localhost:9005",
+				})
+
 				lis, _ = net.Listen("tcp", "localhost:9005")
+
 			})
 
 			AfterEach(func() {
@@ -85,7 +94,7 @@ var _ = Describe("Membrane", func() {
 			})
 
 			It("Should return an error", func() {
-				err := membrane.Start()
+				err := mem.Start()
 				Expect(err).Should(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("could not listen"))
 			})

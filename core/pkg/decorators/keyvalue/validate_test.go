@@ -17,7 +17,7 @@ import (
 	document "github.com/nitrictech/nitric/core/pkg/decorators/keyvalue"
 	kvstorepb "github.com/nitrictech/nitric/core/pkg/proto/kvstore/v1"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

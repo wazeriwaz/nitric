@@ -46,16 +46,16 @@ clean: check-gopath
 # Run the integration tests
 test-integration: install-tools generate-proto
 	@echo Running integration tests
-	@go run github.com/onsi/ginkgo/ginkgo ./tests/...
+	@go run github.com/onsi/ginkgo/v2/ginkgo ./tests/...
 
 # Run the unit tests
 test: install-tools generate-mocks generate-proto
 	@echo Running unit tests
-	@go run github.com/onsi/ginkgo/ginkgo ./pkg/...
+	@go run github.com/onsi/ginkgo/v2/ginkgo ./pkg/...
 
 test-coverage: install-tools generate-proto generate-mocks
 	@echo Running unit tests
-	@go run github.com/onsi/ginkgo/ginkgo -cover -outputdir=./ -coverprofile=all.coverprofile ./pkg/...
+	@go run github.com/onsi/ginkgo/v2/ginkgo -cover -outputdir=./ -coverprofile=all.coverprofile ./pkg/...
 
 check-gopath:
 ifndef GOPATH
