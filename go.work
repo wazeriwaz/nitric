@@ -6,6 +6,7 @@ use (
 	./cloud/common
 	./cloud/debug
 	./cloud/gcp
+	./cloud/oci
 	./core
 	./test
 )

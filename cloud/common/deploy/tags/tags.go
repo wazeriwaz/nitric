@@ -30,6 +30,16 @@ func Tags(stackID string, resourceName string, resourceType resources.ResourceTy
 	}
 }
 
+// Tags generates standard resource tags used to map nitric resources on to deployed resources
+func TagsAsInterface(stackID string, resourceName string, resourceType resources.ResourceType) map[string]interface{} {
+	return map[string]interface{}{
+		// Locate the unique stack by the presence of the key and the resource by its name
+		GetResourceNameKey(stackID): resourceName,
+		// Identifies the nitric resource type that led to the creation of the cloud resource.
+		GetResourceTypeKey(stackID): string(resourceType),
+	}
+}
+
 // GetResourceNameKey returns the key used to retrieve a resource's stack specific name from its tags.
 func GetResourceNameKey(stackID string) string {
 	if stackID == "" {
