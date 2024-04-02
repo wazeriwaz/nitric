@@ -31,10 +31,15 @@ import (
 	"github.com/pulumi/pulumi-random/sdk/v4/go/random"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
-
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
+
+// type ConfigFile struct {
+// 	UserID      string
+// 	Fingerprint string
+// 	Tenancy     string
+// 	Region      string
+// 	KeyFile     string
+// }
 
 type NitricOCIPulumiProvider struct {
 	stackId     string
@@ -55,13 +60,6 @@ type NitricOCIPulumiProvider struct {
 	provider.NitricDefaultOrder
 }
 
-// Embeds the runtime directly into the deploytime binary
-// This way the versions will always match as they're always built and versioned together (as a single artifact)
-// This should also help with docker build speeds as the runtime has already been "downloaded"
-//
-//go:embed runtime-oci
-var runtime []byte
-
 var _ provider.NitricPulumiProvider = (*NitricOCIPulumiProvider)(nil)
 
 func (a *NitricOCIPulumiProvider) Config() (auto.ConfigMap, error) {
@@ -73,16 +71,9 @@ func (a *NitricOCIPulumiProvider) Config() (auto.ConfigMap, error) {
 func (a *NitricOCIPulumiProvider) Init(attributes map[string]interface{}) error {
 	var err error
 
-	region, ok := attributes["region"].(string)
-	if !ok {
-		return fmt.Errorf("Missing region attribute")
-	}
-
-	a.region = region
-
 	a.config, err = ConfigFromAttributes(attributes)
 	if err != nil {
-		return status.Errorf(codes.InvalidArgument, "Bad stack configuration: %s", err)
+		return err
 	}
 
 	var isString bool
@@ -133,18 +124,19 @@ func (a *NitricOCIPulumiProvider) Pre(ctx *pulumi.Context, resources []*pulumix.
 	compartmentName := fmt.Sprintf("compartment-%s", a.stackId)
 
 	a.compartment, err = identity.NewCompartment(ctx, compartmentName, &identity.CompartmentArgs{
-		Description:  pulumi.Sprintf("Compartment for stack %s", ctx.Stack()),
+		Description:  pulumi.Sprintf("compartment for stack %s", ctx.Stack()),
 		EnableDelete: pulumi.Bool(true),
 	})
 	if err != nil {
 		return err
 	}
 
-	a.serviceAccount, err = identity.NewUser(ctx, fmt.Sprintf("sa-%s", a.stackId), &identity.UserArgs{
-		CompartmentId: a.compartment.CompartmentId,
-		Description:   pulumi.Sprintf("Service Account User for stack %s", ctx.Stack()),
-		Email:         pulumi.String(a.config.AdminEmail),
-	})
+	userId, ok := ctx.GetConfig("oci:userOcid")
+	if !ok {
+		return fmt.Errorf("user id not supplied")
+	}
+
+	a.serviceAccount, err = identity.GetUser(ctx, "user-account", pulumi.ID(userId), nil)
 	if err != nil {
 		return err
 	}

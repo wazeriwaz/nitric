@@ -95,7 +95,7 @@ func (n *NitricOCIPulumiProvider) Api(ctx *pulumi.Context, parent pulumi.Resourc
 	n.apis[name], err = apigateway.NewApi(ctx, name, &apigateway.ApiArgs{
 		CompartmentId: n.compartment.CompartmentId,
 		Content:       content,
-		DefinedTags:   pulumi.ToMap(tags.TagsAsInterface(n.stackId, name, resources.API)),
+		FreeformTags:  pulumi.ToMap(tags.TagsAsInterface(n.stackId, name, resources.API)),
 	}, opts...)
 	if err != nil {
 		return err

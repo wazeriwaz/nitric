@@ -3,7 +3,7 @@ package websocket
 import (
 	"context"
 
-	"github.com/nitrictech/nitric/cloud/oci/pkg/runtime/resource"
+	"github.com/nitrictech/nitric/cloud/oci/runtime/resource"
 	websocketpb "github.com/nitrictech/nitric/core/pkg/proto/websockets/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

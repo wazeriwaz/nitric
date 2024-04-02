@@ -19,7 +19,6 @@ package deploy
 import "github.com/mitchellh/mapstructure"
 
 type OCIConfig struct {
-	AdminEmail string `mapstructure:"adminemail"`
 }
 
 // Return Config from stack attributes
@@ -28,10 +27,6 @@ func ConfigFromAttributes(attributes map[string]interface{}) (*OCIConfig, error)
 	err := mapstructure.Decode(attributes, ociConfig)
 	if err != nil {
 		return nil, err
-	}
-
-	if ociConfig.AdminEmail == "" {
-		ociConfig.AdminEmail = "unknown@example.com"
 	}
 
 	return ociConfig, nil

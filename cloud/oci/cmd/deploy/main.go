@@ -18,8 +18,8 @@ package main
 
 import (
 	"github.com/nitrictech/nitric/cloud/common/deploy/provider"
-	"github.com/nitrictech/nitric/cloud/oci/pkg/deploy"
-	"github.com/nitrictech/nitric/cloud/oci/pkg/deploy/runtime"
+	"github.com/nitrictech/nitric/cloud/oci/deploy"
+	"github.com/nitrictech/nitric/cloud/oci/deploy/runtime"
 )
 
 // Start the deployment server

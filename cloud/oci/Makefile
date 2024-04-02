@@ -8,16 +8,16 @@ runtimebin:
 	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/runtime-oci -ldflags="-s -w -extldflags=-static" ./cmd/runtime
 
 predeploybin: runtimebin
-	@cp bin/runtime-oci deploy/runtime/runtime-custom
+	@cp bin/runtime-oci deploy/runtime/runtime-oci
 
 deploybin: predeploybin
 	@echo Building OCI Deployment Server
 	@CGO_ENABLED=0 go build -o bin/deploy-oci -ldflags="-s -w -extldflags=-static" -ldflags="-X google.golang.org/protobuf/reflect/protoregistry.conflictPolicy=ignore" ./cmd/deploy
-	@rm deploy/runtime/runtime-custom
+	@rm deploy/runtime/runtime-oci
 
 .PHONY: install
 install: deploybin
-	@echo installing custom deployment server to ${HOME}/.nitric/providers/custom/pulumi-0.0.1
+	@echo installing custom deployment server to ${HOME}/.nitric/providers/custom/oci-0.0.1
 	@mkdir -p ${HOME}/.nitric/providers/custom/
-	@rm -f ${HOME}/.nitric/providers/custom/pulumi-0.0.1
-	@cp bin/deploy-custom ${HOME}/.nitric/providers/custom/pulumi-0.0.1
+	@rm -f ${HOME}/.nitric/providers/custom/oci-0.0.1
+	@cp bin/deploy-oci ${HOME}/.nitric/providers/custom/oci-0.0.1

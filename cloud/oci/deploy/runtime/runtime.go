@@ -20,7 +20,7 @@ import _ "embed"
 // This way the versions will always match as they're always built and versioned together (as a single artifact)
 // This should also help with docker build speeds as the runtime has already been "downloaded"
 //
-//go:embed runtime-custom
+//go:embed runtime-oci
 var runtime []byte
 
 func NitricOCIRuntime() []byte {
