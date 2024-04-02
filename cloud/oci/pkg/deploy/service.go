@@ -31,11 +31,11 @@ func (n *NitricOCIPulumiProvider) createContainerRepository(ctx *pulumi.Context,
 
 func (n *NitricOCIPulumiProvider) createImage(ctx *pulumi.Context, parent pulumi.Resource, name string, repo *artifacts.ContainerRepository, config *deploymentspb.Service) (*image.Image, error) {
 	if config.GetImage() == nil {
-		return nil, fmt.Errorf("aws provider can only deploy service with an image source")
+		return nil, fmt.Errorf("oci provider can only deploy service with an image source")
 	}
 
 	if config.GetImage().GetUri() == "" {
-		return nil, fmt.Errorf("aws provider can only deploy service with an image source")
+		return nil, fmt.Errorf("oci provider can only deploy service with an image source")
 	}
 
 	if config.Type == "" {
@@ -66,7 +66,7 @@ func (a *NitricOCIPulumiProvider) Service(ctx *pulumi.Context, parent pulumi.Res
 		return err
 	}
 
-	image, err := a.createImage(ctx, parent, name, repo, config)
+	image, err := a.createImage(ctx, parent, name, repo, config.Service)
 	if err != nil {
 		return err
 	}

@@ -25,6 +25,7 @@ import (
 	"github.com/nitrictech/nitric/cloud/common/deploy"
 	"github.com/nitrictech/nitric/cloud/common/deploy/provider"
 	"github.com/nitrictech/nitric/cloud/common/deploy/pulumix"
+	"github.com/pulumi/pulumi-oci/sdk/go/oci/apigateway"
 	"github.com/pulumi/pulumi-oci/sdk/go/oci/functions"
 	"github.com/pulumi/pulumi-oci/sdk/go/oci/identity"
 	"github.com/pulumi/pulumi-random/sdk/v4/go/random"
@@ -48,6 +49,7 @@ type NitricOCIPulumiProvider struct {
 	compartment    *identity.Compartment
 	serviceAccount *identity.User
 
+	apis      map[string]*apigateway.Api
 	functions map[string]*functions.Function
 
 	provider.NitricDefaultOrder
