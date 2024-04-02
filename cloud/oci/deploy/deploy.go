@@ -18,6 +18,7 @@ package deploy
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	_ "embed"
@@ -26,6 +27,7 @@ import (
 	"github.com/nitrictech/nitric/cloud/common/deploy/provider"
 	"github.com/nitrictech/nitric/cloud/common/deploy/pulumix"
 	"github.com/pulumi/pulumi-oci/sdk/go/oci/apigateway"
+	"github.com/pulumi/pulumi-oci/sdk/go/oci/core"
 	"github.com/pulumi/pulumi-oci/sdk/go/oci/functions"
 	"github.com/pulumi/pulumi-oci/sdk/go/oci/identity"
 	"github.com/pulumi/pulumi-random/sdk/v4/go/random"
@@ -33,13 +35,11 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 
-// type ConfigFile struct {
-// 	UserID      string
-// 	Fingerprint string
-// 	Tenancy     string
-// 	Region      string
-// 	KeyFile     string
-// }
+type ConfigFile struct {
+	UserID  string
+	Tenancy string
+	Region  string
+}
 
 type NitricOCIPulumiProvider struct {
 	stackId     string
@@ -48,11 +48,12 @@ type NitricOCIPulumiProvider struct {
 
 	fullStackName string
 
-	config *OCIConfig
-	region string
+	config *ConfigFile
 
 	compartment    *identity.Compartment
 	serviceAccount *identity.User
+
+	subnet *core.Subnet
 
 	apis      map[string]*apigateway.Api
 	functions map[string]*functions.Function
@@ -69,13 +70,6 @@ func (a *NitricOCIPulumiProvider) Config() (auto.ConfigMap, error) {
 }
 
 func (a *NitricOCIPulumiProvider) Init(attributes map[string]interface{}) error {
-	var err error
-
-	a.config, err = ConfigFromAttributes(attributes)
-	if err != nil {
-		return err
-	}
-
 	var isString bool
 
 	iProject, hasProject := attributes["project"]
@@ -124,6 +118,7 @@ func (a *NitricOCIPulumiProvider) Pre(ctx *pulumi.Context, resources []*pulumix.
 	compartmentName := fmt.Sprintf("compartment-%s", a.stackId)
 
 	a.compartment, err = identity.NewCompartment(ctx, compartmentName, &identity.CompartmentArgs{
+		Name:         pulumi.String(compartmentName),
 		Description:  pulumi.Sprintf("compartment for stack %s", ctx.Stack()),
 		EnableDelete: pulumi.Bool(true),
 	})
@@ -131,17 +126,77 @@ func (a *NitricOCIPulumiProvider) Pre(ctx *pulumi.Context, resources []*pulumix.
 		return err
 	}
 
-	userId, ok := ctx.GetConfig("oci:userOcid")
-	if !ok {
-		return fmt.Errorf("user id not supplied")
+	a.config, err = getConfig("default", fmt.Sprintf("%s/.oci/config", os.Getenv("HOME")))
+	if err != nil {
+		return err
 	}
 
-	a.serviceAccount, err = identity.GetUser(ctx, "user-account", pulumi.ID(userId), nil)
+	a.serviceAccount, err = identity.GetUser(ctx, "user-account", pulumi.ID(a.config.UserID), nil)
+	if err != nil {
+		return fmt.Errorf("error getting user: %v", err)
+	}
+
+	cidrBlock := "10.0.1.0/24"
+
+	vcnName := fmt.Sprintf("vcn-%s", a.stackId)
+
+	vcn, err := core.NewVcn(ctx, vcnName, &core.VcnArgs{
+		DisplayName:   pulumi.String(vcnName),
+		CompartmentId: a.compartment.CompartmentId,
+		CidrBlocks:    pulumi.ToStringArray([]string{cidrBlock}),
+	})
+	if err != nil {
+		return err
+	}
+
+	subnetName := fmt.Sprintf("subnet-%s", a.stackId)
+
+	a.subnet, err = core.NewSubnet(ctx, subnetName, &core.SubnetArgs{
+		DisplayName:   pulumi.String(subnetName),
+		CompartmentId: a.compartment.CompartmentId,
+		CidrBlock:     pulumi.String(cidrBlock),
+		VcnId:         vcn.ID(),
+	})
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func getConfig(profile string, filePath string) (*ConfigFile, error) {
+	contents, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	configContents := strings.Split(string(contents), "\n")
+
+	// Get where the specific profile config starts.
+	profileConfig := -1
+	for idx, line := range configContents {
+		if line == fmt.Sprintf("[%s]", profile) {
+			profileConfig = idx
+		}
+	}
+
+	configFile := &ConfigFile{}
+
+	// Get the user id from that section of profile config
+	for idx := 1; idx <= 5; idx++ {
+		keyValue := strings.Split(configContents[profileConfig+idx], "=")
+
+		switch keyValue[0] {
+		case "user":
+			configFile.UserID = keyValue[1]
+		case "tenancy":
+			configFile.Tenancy = keyValue[1]
+		case "region":
+			configFile.Region = keyValue[1]
+		}
+	}
+
+	return configFile, nil
 }
 
 func (a *NitricOCIPulumiProvider) Post(ctx *pulumi.Context) error {
@@ -168,5 +223,8 @@ func (a *NitricOCIPulumiProvider) Result(ctx *pulumi.Context) (pulumi.StringOutp
 }
 
 func NewNitricOCIPulumiProvider() *NitricOCIPulumiProvider {
-	return &NitricOCIPulumiProvider{}
+	return &NitricOCIPulumiProvider{
+		functions: make(map[string]*functions.Function),
+		apis:      make(map[string]*apigateway.Api),
+	}
 }

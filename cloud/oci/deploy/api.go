@@ -51,7 +51,7 @@ func (n *NitricOCIPulumiProvider) Api(ctx *pulumi.Context, parent pulumi.Resourc
 		}))
 	}
 
-	content := pulumi.All(nameUrlPairs).ApplyT(func(pairs []interface{}) (string, error) {
+	content := pulumi.All(nameUrlPairs...).ApplyT(func(pairs []interface{}) (string, error) {
 		openapiDoc := &openapi3.T{}
 		err = openapiDoc.UnmarshalJSON([]byte(config.GetOpenapi()))
 		if err != nil {
@@ -80,7 +80,7 @@ func (n *NitricOCIPulumiProvider) Api(ctx *pulumi.Context, parent pulumi.Resourc
 					}
 				}
 
-				operation.Extensions["x-oci-functions-backend"] = n.functions[serviceName].InvokeEndpoint
+				operation.Extensions["x-oci-functions-backend"] = naps[serviceName]
 			}
 		}
 
@@ -93,6 +93,7 @@ func (n *NitricOCIPulumiProvider) Api(ctx *pulumi.Context, parent pulumi.Resourc
 	}).(pulumi.StringOutput)
 
 	n.apis[name], err = apigateway.NewApi(ctx, name, &apigateway.ApiArgs{
+		DisplayName:   pulumi.String(name),
 		CompartmentId: n.compartment.CompartmentId,
 		Content:       content,
 		FreeformTags:  pulumi.ToMap(tags.TagsAsInterface(n.stackId, name, resources.API)),

@@ -2,6 +2,7 @@ package deploy
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/nitrictech/nitric/cloud/common/deploy/image"
 	"github.com/nitrictech/nitric/cloud/common/deploy/provider"
@@ -23,6 +24,7 @@ type Service struct {
 
 func (n *NitricOCIPulumiProvider) createContainerRepository(ctx *pulumi.Context, parent pulumi.Resource, name string) (*artifacts.ContainerRepository, error) {
 	return artifacts.NewContainerRepository(ctx, name, &artifacts.ContainerRepositoryArgs{
+		DisplayName:   pulumi.String(name),
 		CompartmentId: n.compartment.CompartmentId,
 		FreeformTags:  pulumi.ToMap(tags.TagsAsInterface(n.stackId, name, resources.Service)),
 		IsPublic:      pulumi.Bool(false),
@@ -52,7 +54,7 @@ func (n *NitricOCIPulumiProvider) createImage(ctx *pulumi.Context, parent pulumi
 
 	return image.NewImage(ctx, name, &image.ImageArgs{
 		SourceImage:   config.GetImage().GetUri(),
-		RepositoryUrl: pulumi.Sprintf("%s.ocir.io/%s/%s:latest", n.region, repo.Namespace, repo.DisplayName),
+		RepositoryUrl: pulumi.Sprintf("%s.ocir.io/%s/%s:latest", n.config.Region, repo.Namespace, repo.DisplayName),
 		Username:      pulumi.Sprintf("%s/%s", repo.Namespace, n.serviceAccount.Email),
 		Password:      authToken.Token,
 		Runtime:       runtime(),
@@ -71,21 +73,48 @@ func (a *NitricOCIPulumiProvider) Service(ctx *pulumi.Context, parent pulumi.Res
 		return err
 	}
 
-	app, err := functions.NewApplication(ctx, name, &functions.ApplicationArgs{
+	appName := fmt.Sprintf("application-%s", name)
+	app, err := functions.NewApplication(ctx, appName, &functions.ApplicationArgs{
+		DisplayName:   pulumi.String(appName),
 		CompartmentId: a.compartment.CompartmentId,
 		FreeformTags:  pulumi.ToMap(tags.TagsAsInterface(a.stackId, name, resources.Service)),
-		SubnetIds:     pulumi.ToStringArray([]string{}),
+		SubnetIds:     pulumi.StringArray{a.subnet.ID()},
 	})
 	if err != nil {
 		return err
 	}
 
+	// Get the image uri in the correct form
+	imageUri := image.URI().ApplyT(func(uri string) (string, error) {
+		parts := strings.Split(uri, "@")
+		if len(parts) < 2 {
+			return "", fmt.Errorf("could not extract image uri")
+		}
+
+		return fmt.Sprintf("%s:latest", parts[0]), nil
+	}).(pulumi.StringOutput)
+
+	// Get the image digest by itself
+	imageDigest := image.URI().ApplyT(func(uri string) (string, error) {
+		parts := strings.Split(uri, "@")
+		if len(parts) < 2 {
+			return "", fmt.Errorf("could not extract image digest from uri")
+		}
+
+		return parts[1], nil
+	}).(pulumi.StringOutput)
+
 	function, err := functions.NewFunction(ctx, name, &functions.FunctionArgs{
+		DisplayName:   pulumi.String(name),
 		ApplicationId: app.ID(),
-		MemoryInMbs:   pulumi.String(512),
+		MemoryInMbs:   pulumi.String("512"),
 		FreeformTags:  pulumi.ToMap(tags.TagsAsInterface(a.stackId, name, resources.Service)),
-		Image:         image.URI(),
+		Image:         imageUri,
+		ImageDigest:   imageDigest,
 	})
+	if err != nil {
+		return err
+	}
 
 	a.functions[name] = function
 
