@@ -31,7 +31,7 @@ import (
 	commonutils "github.com/nitrictech/nitric/cloud/common/deploy/utils"
 )
 
-const policyTemplate = `<policies><inbound><base /><set-backend-service base-url="https://%s" />%s<authentication-managed-identity resource="%s" /><set-header name="X-Forwarded-Authorization" exists-action="override"><value>@(context.Request.Headers.GetValueOrDefault("Authorization",""))</value></set-header></inbound><backend><base /></backend><outbound><base /></outbound><on-error><base /></on-error></policies>`
+const policyTemplate = `<policies><inbound><base /><set-backend-service base-url="https://%s" />%s<authentication-managed-identity resource="%s" client-id="%s" /><set-header name="X-Forwarded-Authorization" exists-action="override"><value>@(context.Request.Headers.GetValueOrDefault("Authorization",""))</value></set-header></inbound><backend><base /></backend><outbound><base /></outbound><on-error><base /></on-error></policies>`
 
 const jwtTemplate = `<validate-jwt header-name="Authorization" failed-validation-httpcode="401" failed-validation-error-message="Unauthorized. Access token is missing or invalid." require-expiration-time="false">  
 <openid-config url="%s.well-known/openid-configuration" />  
@@ -222,7 +222,7 @@ func (p *NitricAzurePulumiProvider) Api(ctx *pulumi.Context, parent pulumi.Resou
 					OperationId:       pulumi.String(op.OperationID),
 					PolicyId:          pulumi.String("policy"),
 					Format:            pulumi.String("xml"),
-					Value:             pulumi.Sprintf(policyTemplate, pulumi.Sprintf("%s%s%s", app.App.LatestRevisionFqdn, "/x-nitric-api/", name), jwtTemplateString, p.ContainerEnv.ManagedUser.ClientId),
+					Value:             pulumi.Sprintf(policyTemplate, pulumi.Sprintf("%s%s%s", app.App.LatestRevisionFqdn, "/x-nitric-api/", name), jwtTemplateString, app.Sp.ClientID, p.ContainerEnv.ManagedUser.ClientId),
 				}, pulumi.Parent(api))
 				if err != nil {
 					return errors.WithMessage(err, "NewApiOperationPolicy "+op.OperationID)
