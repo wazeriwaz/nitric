@@ -362,15 +362,6 @@ func (p *NitricAzurePulumiProvider) Service(ctx *pulumi.Context, parent pulumi.R
 						Memory: pulumi.Sprintf("%.2fGi", serviceConfig.ContainerApps.Memory),
 					},
 					Env: env,
-					Probes: app.ContainerAppProbeArray{
-						app.ContainerAppProbeArgs{
-							TcpSocket: app.ContainerAppProbeTcpSocketArgs{
-								Port: pulumi.Int(9001),
-							},
-							TimeoutSeconds: pulumi.Int(5),
-							Type:           pulumi.String("readiness"),
-						},
-					},
 				},
 			},
 		},
