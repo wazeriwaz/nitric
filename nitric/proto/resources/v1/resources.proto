@@ -40,6 +40,7 @@ enum ResourceType {
   ApiSecurityDefinition = 12;
   Queue = 13;
   SqlDatabase = 14;
+  Job = 15;
 }
 
 // Unique identifier for a resource within a nitric application.
