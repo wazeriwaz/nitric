@@ -161,6 +161,23 @@ message Service {
   map<string, string> env = 14; 
 }
 
+message Job {
+  // Source of the service
+  oneof source {
+    // Container image as a service
+    ImageSource image = 1;
+  }
+
+  // A simple type property
+  // describes the requested type of service that this should be
+  // for this project, a provider can implement how this request is satisfied
+  // in any way
+  string type = 10;
+
+  // Environment variables for this service
+  map<string, string> env = 11; 
+}
+
 message Bucket {
   repeated BucketListener listeners = 1;
 }
@@ -290,6 +307,7 @@ message Resource {
     Http http = 19;
     Queue queue = 20;
     SqlDatabase sql_database = 21;
+    Job job = 22;
   }
 }
 
