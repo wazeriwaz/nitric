@@ -29,6 +29,7 @@ import (
 	pm "github.com/nitrictech/nitric/core/pkg/process"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
 	httppb "github.com/nitrictech/nitric/core/pkg/proto/http/v1"
+	jobspb "github.com/nitrictech/nitric/core/pkg/proto/jobs/v1"
 	keyvaluepb "github.com/nitrictech/nitric/core/pkg/proto/keyvalue/v1"
 	kvstorepb "github.com/nitrictech/nitric/core/pkg/proto/kvstore/v1"
 	queuespb "github.com/nitrictech/nitric/core/pkg/proto/queues/v1"
@@ -71,6 +72,7 @@ type MembraneOptions struct {
 	WebsocketPlugin     websocketspb.WebsocketServer
 	QueuesPlugin        queuespb.QueuesServer
 	SqlPlugin           sqlpb.SqlServer
+	JobsPlugin          jobspb.JobsServer
 
 	// Worker plugins
 	ApiPlugin               apis.ApiRequestHandler
@@ -91,6 +93,8 @@ type MembraneOptions struct {
 type Membrane struct {
 	processManager pm.ProcessManager
 	options        MembraneOptions
+
+	executionType ExecutionType
 
 	// Suppress println statements in the membrane server
 	suppressLogs bool
@@ -208,6 +212,7 @@ func (s *Membrane) Start(startOpts ...MembraneStartOptions) error {
 	websocketspb.RegisterWebsocketServer(s.grpcServer, s.options.WebsocketPlugin)
 	queuespb.RegisterQueuesServer(s.grpcServer, s.options.QueuesPlugin)
 	sqlpb.RegisterSqlServer(s.grpcServer, s.options.SqlPlugin)
+	jobspb.RegisterJobsServer(s.grpcServer, s.options.JobsPlugin)
 
 	lis, err := net.Listen("tcp", s.options.ServiceAddress)
 	if err != nil {
@@ -242,19 +247,22 @@ func (s *Membrane) Start(startOpts ...MembraneStartOptions) error {
 	gatewayErrchan := make(chan error)
 	// poolErrchan := make(chan error)
 
-	// Start the gateway
-	go func(errch chan error) {
-		logger.Debugf("Starting Gateway, %d workers currently available", s.WorkerCount())
+	// Only start the gateway if we're running a nitric service
+	if s.executionType == ExecutionType_Service {
+		// Start the gateway
+		go func(errch chan error) {
+			logger.Debugf("Starting Gateway, %d workers currently available", s.WorkerCount())
 
-		errch <- s.options.GatewayPlugin.Start(&gateway.GatewayStartOpts{
-			ApiPlugin:               s.options.ApiPlugin,
-			HttpPlugin:              s.options.HttpPlugin,
-			SchedulesPlugin:         s.options.SchedulesPlugin,
-			TopicsListenerPlugin:    s.options.TopicsListenerPlugin,
-			StorageListenerPlugin:   s.options.StorageListenerPlugin,
-			WebsocketListenerPlugin: s.options.WebsocketListenerPlugin,
-		})
-	}(gatewayErrchan)
+			errch <- s.options.GatewayPlugin.Start(&gateway.GatewayStartOpts{
+				ApiPlugin:               s.options.ApiPlugin,
+				HttpPlugin:              s.options.HttpPlugin,
+				SchedulesPlugin:         s.options.SchedulesPlugin,
+				TopicsListenerPlugin:    s.options.TopicsListenerPlugin,
+				StorageListenerPlugin:   s.options.StorageListenerPlugin,
+				WebsocketListenerPlugin: s.options.WebsocketListenerPlugin,
+			})
+		}(gatewayErrchan)
+	}
 
 	processErrchan := make(chan error)
 	go func(errch chan error) {
@@ -280,7 +288,10 @@ func (s *Membrane) Start(startOpts ...MembraneStartOptions) error {
 }
 
 func (s *Membrane) Stop() {
-	_ = s.options.GatewayPlugin.Stop()
+	if s.options.GatewayPlugin != nil {
+		_ = s.options.GatewayPlugin.Stop()
+	}
+
 	s.grpcServer.Stop()
 	s.processManager.StopAll()
 }
@@ -306,8 +317,11 @@ func New(options *MembraneOptions) (*Membrane, error) {
 		return nil, err
 	}
 
-	if options.GatewayPlugin == nil {
-		return nil, errors.New("missing gateway plugin, Gateway plugin must not be nil")
+	executionType := ExecutionTypeFromString(env.EXECUTION_TYPE.String())
+
+	// Nitric jobs do not implement the gateway plugin
+	if executionType == ExecutionType_Service && options.GatewayPlugin == nil {
+		return nil, errors.New("missing gateway plugin, nitric services require a Gateway plugin")
 	}
 
 	return &Membrane{
@@ -315,5 +329,6 @@ func New(options *MembraneOptions) (*Membrane, error) {
 		options:        *options,
 		minWorkers:     minWorkers,
 		suppressLogs:   options.SuppressLogs,
+		executionType:  executionType,
 	}, nil
 }

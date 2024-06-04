@@ -21,4 +21,6 @@ var (
 	WORKER_TIMEOUT  = GetEnv("WORKER_TIMEOUT", "10")
 	SERVICE_ADDRESS = GetEnv("SERVICE_ADDRESS", "127.0.0.1:50051")
 	LOG_LEVEL       = GetEnv("LOG_LEVEL", "INFO")
+	// The execution type of the nitric execution unit, can either be job or service
+	EXECUTION_TYPE = GetEnv("NITRIC_EXECUTION_TYPE", "service")
 )
