@@ -62,6 +62,7 @@ message ResourceDeclareRequest {
     ApiSecurityDefinitionResource api_security_definition = 16;
     QueueResource queue = 17;
     SqlDatabaseResource sql_database = 18;
+    JobResource job = 19;
   }
 }
 
@@ -74,6 +75,8 @@ message QueueResource {
 message KeyValueStoreResource {
 }
 message SecretResource {
+}
+message JobResource { 
 }
 
 message SqlDatabaseMigrations {
