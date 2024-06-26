@@ -60,6 +60,8 @@ type NitricPulumiProvider interface {
 	KeyValueStore(ctx *pulumi.Context, parent pulumi.Resource, name string, config *deploymentspb.KeyValueStore) error
 	// SqlDatabase - Deploy a SQL Database
 	SqlDatabase(ctx *pulumi.Context, parent pulumi.Resource, name string, config *deploymentspb.SqlDatabase) error
+	// Job - Deploy a Job
+	Job(ctx *pulumi.Context, parent pulumi.Resource, name string, config *deploymentspb.Job) error
 
 	// Post - Called after all resources have been created, before the Pulumi Context is concluded
 	Post(ctx *pulumi.Context) error
