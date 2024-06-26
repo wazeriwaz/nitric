@@ -15,7 +15,6 @@
 package membrane
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -93,8 +92,6 @@ type MembraneOptions struct {
 type Membrane struct {
 	processManager pm.ProcessManager
 	options        MembraneOptions
-
-	executionType ExecutionType
 
 	// Suppress println statements in the membrane server
 	suppressLogs bool
@@ -248,21 +245,20 @@ func (s *Membrane) Start(startOpts ...MembraneStartOptions) error {
 	// poolErrchan := make(chan error)
 
 	// Only start the gateway if we're running a nitric service
-	if s.executionType == ExecutionType_Service {
-		// Start the gateway
-		go func(errch chan error) {
-			logger.Debugf("Starting Gateway, %d workers currently available", s.WorkerCount())
 
-			errch <- s.options.GatewayPlugin.Start(&gateway.GatewayStartOpts{
-				ApiPlugin:               s.options.ApiPlugin,
-				HttpPlugin:              s.options.HttpPlugin,
-				SchedulesPlugin:         s.options.SchedulesPlugin,
-				TopicsListenerPlugin:    s.options.TopicsListenerPlugin,
-				StorageListenerPlugin:   s.options.StorageListenerPlugin,
-				WebsocketListenerPlugin: s.options.WebsocketListenerPlugin,
-			})
-		}(gatewayErrchan)
-	}
+	// Start the gateway
+	go func(errch chan error) {
+		logger.Debugf("Starting Gateway, %d workers currently available", s.WorkerCount())
+
+		errch <- s.options.GatewayPlugin.Start(&gateway.GatewayStartOpts{
+			ApiPlugin:               s.options.ApiPlugin,
+			HttpPlugin:              s.options.HttpPlugin,
+			SchedulesPlugin:         s.options.SchedulesPlugin,
+			TopicsListenerPlugin:    s.options.TopicsListenerPlugin,
+			StorageListenerPlugin:   s.options.StorageListenerPlugin,
+			WebsocketListenerPlugin: s.options.WebsocketListenerPlugin,
+		})
+	}(gatewayErrchan)
 
 	processErrchan := make(chan error)
 	go func(errch chan error) {
@@ -317,18 +313,10 @@ func New(options *MembraneOptions) (*Membrane, error) {
 		return nil, err
 	}
 
-	executionType := ExecutionTypeFromString(env.EXECUTION_TYPE.String())
-
-	// Nitric jobs do not implement the gateway plugin
-	if executionType == ExecutionType_Service && options.GatewayPlugin == nil {
-		return nil, errors.New("missing gateway plugin, nitric services require a Gateway plugin")
-	}
-
 	return &Membrane{
 		processManager: pm.NewProcessManager(options.ChildCommand, options.PreCommands),
 		options:        *options,
 		minWorkers:     minWorkers,
 		suppressLogs:   options.SuppressLogs,
-		executionType:  executionType,
 	}, nil
 }
