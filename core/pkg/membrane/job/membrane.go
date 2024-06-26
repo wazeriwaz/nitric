@@ -2,6 +2,7 @@ package job
 
 import (
 	"net"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -50,6 +51,9 @@ func (j *JobMembrane) Run() error {
 	// Run the command and wait for it to exit
 	cmdParts := strings.Split(j.cmd, " ")
 	cmd := exec.Command(cmdParts[0], cmdParts[1:]...)
+
+	// copy the current environment variables
+	cmd.Env = os.Environ()
 
 	return cmd.Run()
 }
