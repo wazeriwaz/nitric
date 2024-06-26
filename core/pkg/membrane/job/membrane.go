@@ -45,6 +45,8 @@ func (j *JobMembrane) Run() error {
 	// Start the grpc services
 	go grpcServer.Serve(lis)
 
+	defer grpcServer.GracefulStop()
+
 	// Run the command and wait for it to exit
 	cmdParts := strings.Split(j.cmd, " ")
 	cmd := exec.Command(cmdParts[0], cmdParts[1:]...)
