@@ -161,7 +161,7 @@ message Service {
   map<string, string> env = 14; 
 }
 
-message Job {
+message Batch {
   // Source of the service
   oneof source {
     // Container image as a service
@@ -175,7 +175,10 @@ message Job {
   string type = 10;
 
   // Environment variables for this service
-  map<string, string> env = 11; 
+  map<string, string> env = 11;
+
+  // Jobs that this batch service can execute
+  repeated string jobs = 12;
 }
 
 message Bucket {
@@ -307,7 +310,7 @@ message Resource {
     Http http = 19;
     Queue queue = 20;
     SqlDatabase sql_database = 21;
-    Job job = 22;
+    Batch batch = 22;
   }
 }
 
