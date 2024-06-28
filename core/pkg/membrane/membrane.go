@@ -27,8 +27,8 @@ import (
 	"github.com/nitrictech/nitric/core/pkg/logger"
 	pm "github.com/nitrictech/nitric/core/pkg/process"
 	apispb "github.com/nitrictech/nitric/core/pkg/proto/apis/v1"
+	batchpb "github.com/nitrictech/nitric/core/pkg/proto/batch/v1"
 	httppb "github.com/nitrictech/nitric/core/pkg/proto/http/v1"
-	jobspb "github.com/nitrictech/nitric/core/pkg/proto/jobs/v1"
 	keyvaluepb "github.com/nitrictech/nitric/core/pkg/proto/keyvalue/v1"
 	kvstorepb "github.com/nitrictech/nitric/core/pkg/proto/kvstore/v1"
 	queuespb "github.com/nitrictech/nitric/core/pkg/proto/queues/v1"
@@ -71,7 +71,7 @@ type MembraneOptions struct {
 	WebsocketPlugin     websocketspb.WebsocketServer
 	QueuesPlugin        queuespb.QueuesServer
 	SqlPlugin           sqlpb.SqlServer
-	JobsPlugin          jobspb.JobsServer
+	BatchPlugin         batchpb.BatchServer
 
 	// Worker plugins
 	ApiPlugin               apis.ApiRequestHandler
@@ -209,7 +209,7 @@ func (s *Membrane) Start(startOpts ...MembraneStartOptions) error {
 	websocketspb.RegisterWebsocketServer(s.grpcServer, s.options.WebsocketPlugin)
 	queuespb.RegisterQueuesServer(s.grpcServer, s.options.QueuesPlugin)
 	sqlpb.RegisterSqlServer(s.grpcServer, s.options.SqlPlugin)
-	jobspb.RegisterJobsServer(s.grpcServer, s.options.JobsPlugin)
+	batchpb.RegisterBatchServer(s.grpcServer, s.options.BatchPlugin)
 
 	lis, err := net.Listen("tcp", s.options.ServiceAddress)
 	if err != nil {
