@@ -24,3 +24,6 @@ var NITRIC_TRACE_SAMPLE_PERCENT = env.GetEnv("NITRIC_TRACE_SAMPLE_PERCENT", "0")
 
 // Address of the Gateway to register for
 var GATEWAY_ADDRESS = env.GetEnv("GATEWAY_ADDRESS", ":9001")
+
+// Job execution mode
+var NITRIC_JOB_NAME = env.GetEnv("NITRIC_JOB_NAME", "")
