@@ -208,13 +208,23 @@ func (p *NitricGcpPulumiProvider) Service(ctx *pulumi.Context, parent pulumi.Res
 				Image: image.URI(),
 				Ports: cloudrunv2.ServiceTemplateContainerPortArray{
 					cloudrunv2.ServiceTemplateContainerPortArgs{
-						ContainerPort: pulumi.Int(9001),
+						ContainerPort: pulumi.Int(unitConfig.CloudRun.ContainerPort),
 					},
 				},
 				Resources: cloudrunv2.ServiceTemplateContainerResourcesArgs{
 					Limits: pulumi.StringMap{
 						"cpu":    pulumi.Sprintf("%2f", unitConfig.CloudRun.Cpus),
 						"memory": pulumi.Sprintf("%dMi", unitConfig.CloudRun.Memory),
+					},
+					StartupCpuBoost: pulumi.Bool(unitConfig.CloudRun.StartupCpuBoost),
+				},
+				StartupProbe: &cloudrunv2.ServiceTemplateContainerStartupProbeArgs{
+					FailureThreshold:    pulumi.Int(unitConfig.CloudRun.ProbeFailureThreshold),
+					InitialDelaySeconds: pulumi.Int(unitConfig.CloudRun.ProbeInitialDelaySeconds),
+					TimeoutSeconds:      pulumi.Int(unitConfig.CloudRun.ProbeTimeoutSeconds),
+					PeriodSeconds:       pulumi.Int(unitConfig.CloudRun.ProbePeriodSeconds),
+					TcpSocket: &cloudrunv2.ServiceTemplateContainerStartupProbeTcpSocketArgs{
+						Port: pulumi.Int(unitConfig.CloudRun.ContainerPort),
 					},
 				},
 			},

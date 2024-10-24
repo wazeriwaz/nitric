@@ -44,12 +44,18 @@ type GcpBatchCompute struct {
 }
 
 type GcpCloudRunConfig struct {
-	Cpus         float64
-	Memory       int
-	Timeout      int
-	MinInstances int `mapstructure:"min-instances"`
-	MaxInstances int `mapstructure:"max-instances"`
-	Concurrency  int
+	Cpus                     float64
+	Memory                   int
+	Timeout                  int
+	MinInstances             int `mapstructure:"min-instances"`
+	MaxInstances             int `mapstructure:"max-instances"`
+	Concurrency              int
+	ContainerPort            int  `mapstructure:"container-port"`
+	ProbeFailureThreshold    int  `mapstructure:"probe-failure-threshold"`
+	ProbeTimeoutSeconds      int  `mapstructure:"probe-timeout"`
+	ProbeInitialDelaySeconds int  `mapstructure:"probe-initial-delay"`
+	ProbePeriodSeconds       int  `mapstructure:"probe-period"`
+	StartupCpuBoost          bool `mapstructure:"startup-cpu-boost"`
 }
 
 type GcpApiConfig struct {
@@ -68,12 +74,18 @@ type GcpConfig struct {
 }
 
 var defaultCloudRunConfig = &GcpCloudRunConfig{
-	Cpus:         1,
-	Memory:       512,
-	Timeout:      300,
-	MinInstances: 0,
-	MaxInstances: 80,
-	Concurrency:  300,
+	Cpus:                     1,
+	Memory:                   512,
+	Timeout:                  300,
+	MinInstances:             0,
+	MaxInstances:             80,
+	Concurrency:              300,
+	ContainerPort:            9001,
+	ProbeFailureThreshold:    3,
+	ProbeInitialDelaySeconds: 0,
+	ProbeTimeoutSeconds:      1,
+	ProbePeriodSeconds:       10,
+	StartupCpuBoost:          false,
 }
 
 var defaultGcpBatchCompute = &GcpBatchCompute{
