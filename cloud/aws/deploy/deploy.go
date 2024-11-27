@@ -65,6 +65,8 @@ type NitricAwsPulumiProvider struct {
 
 	SqlDatabases map[string]*RdsDatabase
 
+	publicBucket *s3.Bucket
+
 	DockerProvider     *docker.Provider
 	RegistryArgs       *docker.RegistryArgs
 	Vpc                *ec2.Vpc
@@ -230,7 +232,17 @@ func (a *NitricAwsPulumiProvider) Pre(ctx *pulumi.Context, resources []*pulumix.
 }
 
 func (a *NitricAwsPulumiProvider) Post(ctx *pulumi.Context) error {
-	return a.applyVpcRules(ctx)
+	err := a.applyVpcRules(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = a.deployStaticAssets(ctx)
+	if err != nil {
+		return err
+	}
+
+	return a.deployCloudfrontDistribution(ctx)
 }
 
 func (a *NitricAwsPulumiProvider) Result(ctx *pulumi.Context) (pulumi.StringOutput, error) {
