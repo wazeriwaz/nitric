@@ -200,6 +200,51 @@ func (a *NitricAwsPulumiProvider) deployCloudfrontDistribution(ctx *pulumi.Conte
 		)
 	}
 
+	// For each API forward to the appropriate API gateway
+	for name, api := range a.Websockets {
+		apiDomainName := api.ApiEndpoint.ApplyT(func(endpoint string) string {
+			return strings.Replace(endpoint, "wss://", "", 1)
+		}).(pulumi.StringOutput)
+
+		origins = append(origins, &cloudfront.DistributionOriginArgs{
+			DomainName: apiDomainName,
+			OriginId:   pulumi.String(name),
+			CustomOriginConfig: &cloudfront.DistributionOriginCustomOriginConfigArgs{
+				OriginProtocolPolicy: pulumi.String("https-only"),
+				OriginSslProtocols: pulumi.StringArray{
+					pulumi.String("TLSv1.2"),
+					pulumi.String("SSLv3"),
+				},
+				HttpPort:  pulumi.Int(80),
+				HttpsPort: pulumi.Int(443),
+			},
+		})
+
+		orderedCacheBeviours = append(orderedCacheBeviours,
+			&cloudfront.DistributionOrderedCacheBehaviorArgs{
+				PathPattern: pulumi.Sprintf("ws/%s/*", name),
+				// rewrite the URL to the nitric service
+				FunctionAssociations: cloudfront.DistributionOrderedCacheBehaviorFunctionAssociationArray{
+					&cloudfront.DistributionOrderedCacheBehaviorFunctionAssociationArgs{
+						EventType:   pulumi.String("viewer-request"),
+						FunctionArn: fun.Arn,
+					},
+				},
+				AllowedMethods: pulumi.ToStringArray([]string{"GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"}),
+				CachedMethods:  pulumi.ToStringArray([]string{"GET", "HEAD", "OPTIONS"}),
+				TargetOriginId: pulumi.String(name),
+				ForwardedValues: &cloudfront.DistributionOrderedCacheBehaviorForwardedValuesArgs{
+					QueryString: pulumi.Bool(true),
+					Cookies: &cloudfront.DistributionOrderedCacheBehaviorForwardedValuesCookiesArgs{
+						Forward: pulumi.String("all"),
+					},
+					// Headers: pulumi.ToStringArray([]string{"*"}),
+				},
+				ViewerProtocolPolicy: pulumi.String("https-only"),
+			},
+		)
+	}
+
 	// Deploy a CloudFront distribution for the S3 bucket
 	_, err = cloudfront.NewDistribution(ctx, "distribution", &cloudfront.DistributionArgs{
 		Origins:               origins,
