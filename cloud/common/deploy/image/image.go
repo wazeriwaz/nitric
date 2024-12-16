@@ -27,6 +27,8 @@ import (
 
 	"github.com/docker/docker/client"
 	"github.com/pkg/errors"
+
+	"github.com/pulumi/pulumi-docker-build/sdk/go/dockerbuild"
 	"github.com/pulumi/pulumi-docker/sdk/v4/go/docker"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 	"golang.org/x/exp/maps"
@@ -97,27 +99,35 @@ func NewLocalImage(ctx *pulumi.Context, name string, args *LocalImageArgs, opts 
 		return nil, err
 	}
 
-	image, err := docker.NewImage(ctx, name+"-image", &docker.ImageArgs{
-		ImageName: args.RepositoryUrl,
-		Build: docker.DockerBuildArgs{
-			Context:    pulumi.String(buildContext),
-			Dockerfile: pulumi.String(path.Join(buildContext, "Dockerfile")),
-			Args: pulumi.StringMap{
-				"SOURCE_IMAGE":    pulumi.String(args.SourceImage),
-				"SOURCE_IMAGE_ID": pulumi.String(args.SourceImageID),
-			},
-			Platform: pulumi.String("linux/amd64"),
+	image, err := dockerbuild.NewImage(ctx, name+"-image", &dockerbuild.ImageArgs{
+		Tags: pulumi.StringArray{
+			args.RepositoryUrl,
 		},
-		SkipPush: pulumi.Bool(true),
+		Dockerfile: dockerbuild.DockerfileArgs{
+			Location: pulumi.String(path.Join(buildContext, "Dockerfile")),
+		},
+		Context: dockerbuild.BuildContextArgs{
+			Location: pulumi.String(buildContext),
+		},
+		BuildArgs: pulumi.StringMap{
+			"SOURCE_IMAGE":    pulumi.String(args.SourceImage),
+			"SOURCE_IMAGE_ID": pulumi.String(args.SourceImageID),
+		},
+		Platforms: dockerbuild.PlatformArray{
+			dockerbuild.Platform_Linux_amd64,
+			// dockerbuild.Platform_Linux_arm64,
+			// dockerbuild.Platform_Darwin_arm64,
+		},
+		Push: pulumi.Bool(false),
 	}, defaultOpts...)
 	if err != nil {
 		return nil, err
 	}
 
 	res.DockerImage, err = docker.NewRegistryImage(ctx, name+"-image", &docker.RegistryImageArgs{
-		Name: image.ImageName,
+		Name: image.Tags.Index(pulumi.Int(0)),
 		Triggers: pulumi.Map{
-			"hash": image.RepoDigest,
+			"hash": image.Digest,
 		},
 	}, defaultOpts...)
 	if err != nil {
@@ -194,30 +204,36 @@ func NewImage(ctx *pulumi.Context, name string, args *ImageArgs, opts ...pulumi.
 		return nil, err
 	}
 
-	buildArgs := combineBuildArgs(map[string]string{
-		"BASE_IMAGE":    args.SourceImage,
-		"RUNTIME_FILE":  "runtime",
-		"BASE_IMAGE_ID": sourceImageID,
-	}, imageWrapper.Args)
-
-	image, err := docker.NewImage(ctx, name+"-image", &docker.ImageArgs{
-		ImageName: args.RepositoryUrl,
-		Build: docker.DockerBuildArgs{
-			Context:    pulumi.String(buildContext),
-			Dockerfile: pulumi.String(path.Join(buildContext, "Dockerfile")),
-			Args:       buildArgs,
-			Platform:   pulumi.String("linux/amd64"),
+	image, err := dockerbuild.NewImage(ctx, name+"-image", &dockerbuild.ImageArgs{
+		Tags: pulumi.StringArray{
+			args.RepositoryUrl,
 		},
-		SkipPush: pulumi.Bool(true),
+		Dockerfile: dockerbuild.DockerfileArgs{
+			Location: pulumi.String(path.Join(buildContext, "Dockerfile")),
+		},
+		Context: dockerbuild.BuildContextArgs{
+			Location: pulumi.String(buildContext),
+		},
+		BuildArgs: pulumi.StringMap{
+			"BASE_IMAGE":    pulumi.String(args.SourceImage),
+			"RUNTIME_FILE":  pulumi.String("runtime"),
+			"BASE_IMAGE_ID": pulumi.String(sourceImageID),
+		},
+		Platforms: dockerbuild.PlatformArray{
+			dockerbuild.Platform_Linux_amd64,
+			// dockerbuild.Platform_Linux_arm64,
+			// dockerbuild.Platform_Darwin_arm64,
+		},
+		Push: pulumi.Bool(false),
 	}, defaultOpts...)
 	if err != nil {
 		return nil, err
 	}
 
 	res.DockerImage, err = docker.NewRegistryImage(ctx, name+"-image", &docker.RegistryImageArgs{
-		Name: image.ImageName,
+		Name: image.Tags.Index(pulumi.Int(0)),
 		Triggers: pulumi.Map{
-			"hash": image.RepoDigest,
+			"hash": image.Digest,
 		},
 	}, defaultOpts...)
 	if err != nil {
