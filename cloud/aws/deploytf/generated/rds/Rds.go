@@ -16,6 +16,7 @@ type Rds interface {
 	cdktf.TerraformModule
 	// Experimental.
 	CdktfStack() cdktf.TerraformStack
+	ClusterArnOutput() *string
 	ClusterEndpointOutput() *string
 	ClusterPasswordOutput() *string
 	ClusterUsernameOutput() *string
@@ -94,6 +95,16 @@ func (j *jsiiProxy_Rds) CdktfStack() cdktf.TerraformStack {
 	_jsii_.Get(
 		j,
 		"cdktfStack",
+		&returns,
+	)
+	return returns
+}
+
+func (j *jsiiProxy_Rds) ClusterArnOutput() *string {
+	var returns *string
+	_jsii_.Get(
+		j,
+		"clusterArnOutput",
 		&returns,
 	)
 	return returns

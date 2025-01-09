@@ -15,6 +15,7 @@ func init() {
 			_jsii_.MemberMethod{JsiiMethod: "addOverride", GoMethod: "AddOverride"},
 			_jsii_.MemberMethod{JsiiMethod: "addProvider", GoMethod: "AddProvider"},
 			_jsii_.MemberProperty{JsiiProperty: "cdktfStack", GoGetter: "CdktfStack"},
+			_jsii_.MemberProperty{JsiiProperty: "clusterArnOutput", GoGetter: "ClusterArnOutput"},
 			_jsii_.MemberProperty{JsiiProperty: "clusterEndpointOutput", GoGetter: "ClusterEndpointOutput"},
 			_jsii_.MemberProperty{JsiiProperty: "clusterPasswordOutput", GoGetter: "ClusterPasswordOutput"},
 			_jsii_.MemberProperty{JsiiProperty: "clusterUsernameOutput", GoGetter: "ClusterUsernameOutput"},
