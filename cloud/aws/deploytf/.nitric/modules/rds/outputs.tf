@@ -18,6 +18,11 @@ output "cluster_arn" {
   value       = aws_rds_cluster.rds_cluster.arn
 }
 
+output "cluster_id" {
+  description = "The id of the RDS cluster"
+  value       = aws_rds_cluster.rds_cluster.id
+}
+
 output "codebuild_role_arn" {
   description = "The arn of the codebuild role"
   value       = aws_iam_role.codebuild_role.arn

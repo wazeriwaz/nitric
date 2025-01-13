@@ -18,6 +18,7 @@ type Rds interface {
 	CdktfStack() cdktf.TerraformStack
 	ClusterArnOutput() *string
 	ClusterEndpointOutput() *string
+	ClusterIdOutput() *string
 	ClusterPasswordOutput() *string
 	ClusterUsernameOutput() *string
 	CodebuildRoleArnOutput() *string
@@ -115,6 +116,16 @@ func (j *jsiiProxy_Rds) ClusterEndpointOutput() *string {
 	_jsii_.Get(
 		j,
 		"clusterEndpointOutput",
+		&returns,
+	)
+	return returns
+}
+
+func (j *jsiiProxy_Rds) ClusterIdOutput() *string {
+	var returns *string
+	_jsii_.Get(
+		j,
+		"clusterIdOutput",
 		&returns,
 	)
 	return returns

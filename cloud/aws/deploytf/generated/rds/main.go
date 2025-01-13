@@ -17,6 +17,7 @@ func init() {
 			_jsii_.MemberProperty{JsiiProperty: "cdktfStack", GoGetter: "CdktfStack"},
 			_jsii_.MemberProperty{JsiiProperty: "clusterArnOutput", GoGetter: "ClusterArnOutput"},
 			_jsii_.MemberProperty{JsiiProperty: "clusterEndpointOutput", GoGetter: "ClusterEndpointOutput"},
+			_jsii_.MemberProperty{JsiiProperty: "clusterIdOutput", GoGetter: "ClusterIdOutput"},
 			_jsii_.MemberProperty{JsiiProperty: "clusterPasswordOutput", GoGetter: "ClusterPasswordOutput"},
 			_jsii_.MemberProperty{JsiiProperty: "clusterUsernameOutput", GoGetter: "ClusterUsernameOutput"},
 			_jsii_.MemberProperty{JsiiProperty: "codebuildRoleArnOutput", GoGetter: "CodebuildRoleArnOutput"},
